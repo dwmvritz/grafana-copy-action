@@ -1,0 +1,18 @@
+<html><body>
+<script>
+  const val = new URLSearchParams(location.search).get('v');
+  navigator.clipboard.writeText(val).then(() => {
+    document.body.innerText = '✅ Copied: ' + val;
+    setTimeout(() => window.close(), 1000);
+  }).catch(() => {
+    // Fallback if clipboard API is blocked
+    const input = document.createElement('input');
+    input.value = val;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.innerText = '✅ Copied: ' + val;
+    setTimeout(() => window.close(), 1000);
+  });
+</script>
+</body></html>
