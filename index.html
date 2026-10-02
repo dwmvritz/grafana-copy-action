@@ -136,7 +136,7 @@
     </div>
   </div>
 
- <script>
+<script>
   const val = new URLSearchParams(location.search).get('v') || '';
   document.getElementById('value').textContent = val;
 
@@ -149,31 +149,55 @@
 
     if (!navigator.clipboard) {
       console.warn('[copy] navigator.clipboard not available — page may not be served over HTTPS');
+      if (userGesture) return fallbackCopy();
+      return onFailure();
     }
 
-    navigator.clipboard.writeText(val).then(() => {
-      console.log('[copy] navigator.clipboard.writeText() succeeded');
+    // ClipboardItem promise pattern — resolves data lazily but
+    // the write() call itself is synchronous with the gesture
+    const blob = new Blob([val], { type: 'text/plain' });
+    const item = new ClipboardItem({
+      'text/plain': Promise.resolve(blob)
+    });
+
+    console.log('[copy] trying clipboard.write() with ClipboardItem promise pattern');
+
+    navigator.clipboard.write([item]).then(() => {
+      console.log('[copy] clipboard.write() succeeded');
       onSuccess();
     }).catch((err) => {
-      console.warn('[copy] navigator.clipboard.writeText() failed:', err.name, err.message);
+      console.warn('[copy] clipboard.write() failed:', err.name, err.message);
 
-      if (userGesture) {
-        console.log('[copy] falling back to execCommand("copy") with user gesture');
-        const ta = document.createElement('textarea');
-        ta.value = val;
-        ta.style.position = 'fixed';
-        ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        const result = document.execCommand('copy');
-        document.body.removeChild(ta);
-        console.log('[copy] execCommand("copy") returned:', result);
+      // try writeText as second attempt
+      console.log('[copy] trying clipboard.writeText() fallback');
+      navigator.clipboard.writeText(val).then(() => {
+        console.log('[copy] clipboard.writeText() succeeded');
         onSuccess();
-      } else {
-        console.warn('[copy] auto-copy failed without user gesture — waiting for button click');
-        onFailure();
-      }
+      }).catch((err2) => {
+        console.warn('[copy] clipboard.writeText() failed:', err2.name, err2.message);
+
+        if (userGesture) {
+          fallbackCopy();
+        } else {
+          console.warn('[copy] auto-copy failed without user gesture — waiting for button click');
+          onFailure();
+        }
+      });
     });
+  }
+
+  function fallbackCopy() {
+    console.log('[copy] falling back to execCommand("copy") with user gesture');
+    const ta = document.createElement('textarea');
+    ta.value = val;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    const result = document.execCommand('copy');
+    document.body.removeChild(ta);
+    console.log('[copy] execCommand("copy") returned:', result);
+    onSuccess();
   }
 
   function onSuccess() {
