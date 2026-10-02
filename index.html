@@ -137,24 +137,49 @@
   </div>
 
   <script>
-    const val = new URLSearchParams(location.search).get('v') || '';
-    document.getElementById('value').textContent = val;
+  const val = new URLSearchParams(location.search).get('v') || '';
+  document.getElementById('value').textContent = val;
 
-    function copyValue() {
-      navigator.clipboard.writeText(val).then(() => {
-        window.close();
-      }).catch(() => {
-        const input = document.createElement('textarea');
-        input.value = val;
-        document.body.appendChild(input);
-        input.select();
+  const btn = document.getElementById('copyBtn');
+  const dot = document.querySelector('.status-dot');
+  const label = document.querySelector('.status-label');
+
+  function copyValue() {
+    navigator.clipboard.writeText(val).then(() => {
+      onSuccess();
+    }).catch(() => {
+      // fallback
+      const ta = document.createElement('textarea');
+      ta.value = val;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
         document.execCommand('copy');
-        document.body.removeChild(input);
-        window.close();
-      });
-    }
+        onSuccess();
+      } catch {
+        onFailure();
+      }
+      document.body.removeChild(ta);
+    });
+  }
 
-    copyValue();
-  </script>
+  function onSuccess() {
+    btn.textContent = 'Copied!';
+    dot.style.background = '#22c55e';
+    label.textContent = 'Copied to clipboard. You can close this tab.';
+    // Only works if tab was opened via window.open()
+    setTimeout(() => window.close(), 600);
+  }
+
+  function onFailure() {
+    dot.style.background = '#ef4444';
+    label.textContent = 'Auto-copy blocked. Click the Copy button.';
+  }
+
+  // Attempt auto-copy (will likely fail without user gesture)
+  copyValue();
+</script>
 </body>
 </html>
