@@ -136,7 +136,7 @@
     </div>
   </div>
 
-  <script>
+ <script>
   const val = new URLSearchParams(location.search).get('v') || '';
   document.getElementById('value').textContent = val;
 
@@ -145,36 +145,48 @@
   const label = document.querySelector('.status-label');
 
   function copyValue(userGesture) {
+    console.log('[copy] attempt', { userGesture, valueLength: val.length });
+
+    if (!navigator.clipboard) {
+      console.warn('[copy] navigator.clipboard not available — page may not be served over HTTPS');
+    }
+
     navigator.clipboard.writeText(val).then(() => {
+      console.log('[copy] navigator.clipboard.writeText() succeeded');
       onSuccess();
-    }).catch(() => {
+    }).catch((err) => {
+      console.warn('[copy] navigator.clipboard.writeText() failed:', err.name, err.message);
+
       if (userGesture) {
-        // fallback is reliable with a real click
+        console.log('[copy] falling back to execCommand("copy") with user gesture');
         const ta = document.createElement('textarea');
         ta.value = val;
         ta.style.position = 'fixed';
         ta.style.opacity = '0';
         document.body.appendChild(ta);
         ta.select();
-        document.execCommand('copy');
+        const result = document.execCommand('copy');
         document.body.removeChild(ta);
+        console.log('[copy] execCommand("copy") returned:', result);
         onSuccess();
       } else {
-        // auto-copy failed, don't close
+        console.warn('[copy] auto-copy failed without user gesture — waiting for button click');
         onFailure();
       }
     });
   }
 
   function onSuccess() {
+    console.log('[copy] success — closing tab in 500ms');
     btn.textContent = 'Copied!';
     btn.disabled = true;
     dot.style.background = '#22c55e';
     label.textContent = 'Copied. You can close this tab.';
-    setTimeout(() => window.close(), 1);
+    setTimeout(() => window.close(), 500);
   }
 
   function onFailure() {
+    console.log('[copy] showing fallback UI — user must click button');
     dot.style.background = '#ef4444';
     label.textContent = 'Click the Copy button to copy.';
   }
